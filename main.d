@@ -93,7 +93,6 @@ public:
         return post(url, option, http);
     }
 private:
-    
     ubyte[] hmac_sha1(in string key, in string message){
         auto padding(in ubyte[] k){
             auto h = (64 < k.length)? sha1Of(k): k;

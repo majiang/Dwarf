@@ -1,0 +1,6 @@
+*.bat
+libssl32.dll
+*.d~
+*.exe
+*.txt
+DigiCertAssuredIDRootG3.crt
