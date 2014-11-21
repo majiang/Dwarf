@@ -124,7 +124,7 @@ private:
 }
 
 class TweetButton : Button{
-    this(ref Entry ent){
+    this(Entry ent){
         super("Tweet!");
         modifyFont("Arial", 14);
         addOnButtonRelease(&tweet);
