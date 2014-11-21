@@ -56,7 +56,7 @@ class Twitter{
 public:
     mixin Singleton;
     static this(){
-        // ‚Æ‚è‚ ‚¦‚¸Key‚Í’¼‘‚«
+        // ã¨ã‚Šã‚ãˆãšKeyã¯ç›´æ›¸ã
         auto fin = File("consumer.txt");  
         consumerKey       = chomp(fin.readln());
         consumerKeySecret =  chomp(fin.readln());
