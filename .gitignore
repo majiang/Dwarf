@@ -4,3 +4,4 @@ libssl32.dll
 *.exe
 *.txt
 DigiCertAssuredIDRootG3.crt
+main.obj

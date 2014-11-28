@@ -1,4 +1,4 @@
-import gtk.MainWindow;
+Ôªøimport gtk.MainWindow;
 import gtk.Label;
 import gtk.Main;
 import gtk.Entry;
@@ -56,41 +56,64 @@ class Twitter{
 public:
     mixin Singleton;
     static this(){
-        // Ç∆ÇËÇ†Ç¶Ç∏KeyÇÕíºèëÇ´
+        // „Å®„Çä„ÅÇ„Åà„ÅöKey„ÅØÁõ¥Êõ∏„Åç
         auto fin = File("consumer.txt");  
         consumerKey       = chomp(fin.readln());
         consumerKeySecret =  chomp(fin.readln());
         accessToken = chomp(fin.readln());
         accessTokenSecret = chomp(fin.readln());
-        writeln(consumerKey);
     }
     auto sendTweet(string text){
-        string now = Clock.currTime.toUnixTime.to!string;
-        string[string] params = [
-                             "status" : text,
-                             "include_entities" : "true",
-                             "oauth_consumer_key"     : consumerKey,
-                             "oauth_nonce"            : now,
-                             "oauth_signature_method" : "HMAC-SHA1",
-                             "oauth_timestamp"        : now,
-                             "oauth_token"            : accessToken,
-                             "oauth_version"          : "1.0"];
+        string[string] params = ["status" : text,
+                                 "include_entities" : "true"];
+        return signedPost("https://api.twitter.com/1.1/statuses/update.json", params);
+    }
 
+    auto getHomeTimeline(int count = 20){
+        auto url = "https://api.twitter.com/1.1/statuses/home_timeline.json";
+        string[string] params = ["count" : to!string(count)];
+        auto ret = signedGet(url, params);
 
-        string oauthSignature = createSignature(consumerKeySecret, accessTokenSecret, "POST", url, params);
-        params["oauth_signature"] = oauthSignature;
+        int x = 0;
+        string buf = "";
+        bool push = false;
+        string[] dat;
+        dat.length = count;
+        int pt = 0;
+        for(int p = 0; p < ret.length; p++){
+            if(ret[p] == '{'){
+                if(x == 0){
+                    buf = "";
+                    push = true;
+                }
+                buf ~= ret[p];
+                x++;
+            }else if(ret[p] == '}'){
+                x--;
+                buf ~= ret[p];
+                if(x == 0){
+                    push = false;
+                    dat[pt++] = buf;
+                }
+            }else if(push){
+                buf ~= ret[p];
+            }
+        }
+       
+        foreach(el; dat){ 
+            auto parsed = parseJSON(el);
+            writeln("\r------------------------------------------------------------------------------");
+            writefln("%s:\n%s", parsed.object["user"].object["name"].str, parsed.object["text"].str);
+            writeln("------------------------------------------------------------------------------");
+        }
+    }
 
-        auto authorize_keys = params.keys.filter!q{a.countUntil("oauth_")==0};
-        auto authorize = "OAuth " ~ authorize_keys.map!(x => x ~ "=" ~ params[x]).join(",");
-
-        auto option_keys = params.keys.filter!q{a.countUntil("oauth_")!=0};
-        auto option = option_keys.map!(x => x ~ "=" ~ params[x]).join("&");
-
-        auto http = HTTP();
-        http.caInfo("cacert.pem");
-        http.addRequestHeader("Authorization", authorize);
-        http.method = HTTP.Method.post;
-        return post(url, option, http);
+    auto beginUserStream(){
+        auto url = "https://userstream.twitter.com/1.1/user.json";
+        auto path = getHttpOptions("GET", url); 
+        signedGet(url);
+        ////////////// under construction /////////////
+        return;
     }
 private:
     ubyte[] hmac_sha1(in string key, in string message){
@@ -103,7 +126,7 @@ private:
     }
 
     // Calculating OAuthSignature
-    string createSignature(string cks, string ats, string method, string url, string[string] params){
+    string createSignature(in string cks, in string ats, in string method, in string url, string[string] params){
         // URIEncode
         foreach(k, v; params)  params[k] = encodeTw(v);
     
@@ -115,11 +138,49 @@ private:
         return oauthSignature;
     }
 
-    const string url = "https://api.twitter.com/1.1/statuses/update.json";
+    auto getHttpOptions(in string method, in string uri, in string[string] params = null){
+        string now = Clock.currTime.toUnixTime.to!string;
+        string[string] para = [
+                       "oauth_consumer_key"     : consumerKey,
+                       "oauth_nonce"            : now,
+                       "oauth_signature_method" : "HMAC-SHA1",
+                       "oauth_timestamp"        : now,
+                       "oauth_token"            : accessToken,
+                       "oauth_version"          : "1.0"];
+        foreach(k, v; params) para[k] = v;
+        
+        string oauthSignature = createSignature(consumerKeySecret, accessTokenSecret, method, uri, para);
+        para["oauth_signature"] = oauthSignature;
+
+        auto authorize_keys = para.keys.filter!q{a.countUntil("oauth_")==0};
+        auto authorize = "OAuth " ~ authorize_keys.map!(x => x ~ "=" ~ para[x]).join(",");
+
+        auto option_keys = para.keys.filter!q{a.countUntil("oauth_")!=0};
+        auto option = option_keys.map!(x => x ~ "=" ~ para[x]).join("&");
+
+        return  tuple(authorize, option);
+    }
+
+    string signedCall(in string method, in string uri, in string[string] params, string delegate(HTTP, in string, in string) call){
+        auto op = getHttpOptions(method, uri, params);
+
+        auto http = HTTP();
+        http.caInfo("cacert.pem");
+        http.addRequestHeader("Authorization", op[0]);
+        return call(http, uri, op[1]);
+    }
+
+    string signedGet(in string uri, string[string] param = null) {
+        return signedCall("GET", uri, param, (http, uri, option){return cast(immutable).get((0 < option.length)? uri ~ "?" ~ option: uri, http);});
+    }
+    string signedPost(in string uri, string[string] param = null){
+        return signedCall("POST", uri, param, (http, uri, option){return cast(immutable)post(uri, option, http);});
+    }
+
     static const string consumerKey;
     static const string consumerKeySecret;
-    string accessToken;
-    string accessTokenSecret;
+    static const string accessToken;
+    static const string accessTokenSecret;
 }
 
 class TweetButton : Button{
@@ -143,6 +204,8 @@ void main(string[] args){
     Main.init(args);
     MainWindow win = new MainWindow("Dwarf");
     win.setDefaultSize(400, 300);
+
+    Twitter.get().getHomeTimeline();
 
     Box box = new Box(Orientation.VERTICAL, 10);
     box.add(new Label("Hello World"));
