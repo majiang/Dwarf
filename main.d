@@ -78,8 +78,6 @@ public:
         string buf;
         bool push;
         string[] dat;
-        dat.length = count;
-        int pt;
         foreach (rp; ret){
             if(rp == '{'){
                 if(x == 0){
@@ -93,7 +91,7 @@ public:
                 buf ~= rp;
                 if(x == 0){
                     push = false;
-                    dat[pt++] = buf;
+                    dat ~= buf;
                 }
             }else if(push){
                 buf ~= rp;
