@@ -74,12 +74,12 @@ public:
         string[string] params = ["count" : to!string(count)];
         auto ret = signedGet(url, params);
 
-        int x = 0;
-        string buf = "";
-        bool push = false;
+        int x;
+        string buf;
+        bool push;
         string[] dat;
         dat.length = count;
-        int pt = 0;
+        int pt;
         for(int p = 0; p < ret.length; p++){
             if(ret[p] == '{'){
                 if(x == 0){
