@@ -80,23 +80,23 @@ public:
         string[] dat;
         dat.length = count;
         int pt;
-        for(int p = 0; p < ret.length; p++){
-            if(ret[p] == '{'){
+        foreach (rp; ret){
+            if(rp == '{'){
                 if(x == 0){
                     buf = "";
                     push = true;
                 }
-                buf ~= ret[p];
+                buf ~= rp;
                 x++;
-            }else if(ret[p] == '}'){
+            }else if(rp == '}'){
                 x--;
-                buf ~= ret[p];
+                buf ~= rp;
                 if(x == 0){
                     push = false;
                     dat[pt++] = buf;
                 }
             }else if(push){
-                buf ~= ret[p];
+                buf ~= rp;
             }
         }
        
